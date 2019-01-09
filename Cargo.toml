@@ -1,0 +1,10 @@
+[package]
+name = "readfilez"
+version = "0.0.1"
+authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
+description = "Quite fast file to slice reading"
+license = "MIT"
+repository = "https://github.com/zserik/readfilez"
+
+[dependencies]
+memmap = "0.7"
