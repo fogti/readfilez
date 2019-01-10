@@ -18,14 +18,6 @@ fn open_as_mmap(fh: &fs::File, len: usize) -> io::Result<Mmap> {
     })
 }
 
-macro_rules! early_wrapret {
-    ( $x:expr, $cont:path ) => {
-        if let $cont(val) = $x {
-            return $cont(val);
-        }
-    };
-}
-
 // public interface
 
 /// Returns the length of the file,
@@ -64,8 +56,12 @@ pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
     let len = get_file_len(&fh);
 
     // do NOT try to map the file if the size is unknown
-    if let Some(len) = len {
-        early_wrapret!(open_as_mmap(&fh, len).map(Mapped), Ok);
+    if let Some(ret) = len
+        .and_then(|len| (len != 0).as_some(len))
+        .and_then(|len| open_as_mmap(&fh, len).ok())
+        .map(Mapped)
+    {
+        return Ok(ret);
     }
     let mut contents = Vec::with_capacity(len.unwrap_or(0) + 1);
     io::BufReader::new(fh).read_to_end(&mut contents)?;
