@@ -57,11 +57,8 @@ pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
     let len = get_file_len(&fh);
 
     // do NOT try to map the file if the size is unknown
-    if let Some(ret) = len
-        .and_then(|len| open_as_mmap(&fh, len).ok())
-        .map(Mapped)
-    {
-        return Ok(ret);
+    if let Some(ret) = len.and_then(|len| open_as_mmap(&fh, len).ok()) {
+        return Ok(Mapped(ret));
     }
     let mut contents = Vec::with_capacity(len.unwrap_or(0) + 1);
     io::BufReader::new(fh).read_to_end(&mut contents)?;
