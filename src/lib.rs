@@ -4,9 +4,9 @@ extern crate boolinator;
 extern crate memmap;
 mod backend;
 
+use backend::*;
 use memmap::Mmap;
 use std::{fs, io};
-use backend::*;
 
 // public interface
 
@@ -61,7 +61,10 @@ impl std::default::Default for LengthSpec {
     /// read as much as possible
     #[inline]
     fn default() -> Self {
-        Self { bound: None, is_exact: false }
+        Self {
+            bound: None,
+            is_exact: false,
+        }
     }
 }
 
@@ -70,15 +73,16 @@ impl std::default::Default for LengthSpec {
 /// It doesn't sanitize the fact that mapping a slice greater than isize::MAX
 /// has undefined behavoir.
 pub fn get_file_len(fh: &fs::File) -> Option<u64> {
-    fh.metadata()
-        .ok()
-        .map(|x| x.len())
+    fh.metadata().ok().map(|x| x.len())
 }
 
 /// Reads the file contents
 pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
     let mut fh = fh?;
-    let lns = LengthSpec { bound: None, is_exact: true };
+    let lns = LengthSpec {
+        bound: None,
+        is_exact: true,
+    };
     read_part_from_file(&mut fh, 0, lns)
 }
 
@@ -88,7 +92,11 @@ pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
 /// if you want a more ergonomic interface, use [`ContinuableFile`] or [`ChunkedFile`].
 /// fh is a reference because this function is intended to be called multiple times
 #[inline]
-pub fn read_part_from_file(mut fh: &mut fs::File, offset: u64, len: LengthSpec) -> io::Result<FileHandle> {
+pub fn read_part_from_file(
+    mut fh: &mut fs::File,
+    offset: u64,
+    len: LengthSpec,
+) -> io::Result<FileHandle> {
     read_part_from_file_intern(&mut fh, offset, len, None)
 }
 
@@ -107,7 +115,11 @@ pub struct ChunkedFile {
 
 impl ContinuableFile {
     pub fn new(file: fs::File) -> Self {
-        let mut ret = Self { file, flen: None, offset: 0 };
+        let mut ret = Self {
+            file,
+            flen: None,
+            offset: 0,
+        };
         ret.sync_len();
         return ret;
     }
@@ -130,23 +142,24 @@ impl ContinuableFile {
 
 impl io::Seek for ContinuableFile {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-        let oore = Err(io::Error::new(io::ErrorKind::InvalidInput, "seek out of range"));
+        let oore = Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "seek out of range",
+        ));
         use io::SeekFrom::*;
 
         match pos {
-            Start(x)   => self.offset = x,
-            End(x)     => {
+            Start(x) => self.offset = x,
+            End(x) => {
                 let xn: u64 = (-x) as u64;
                 if (x > 0) || self.flen.is_none() || (xn > self.flen.unwrap()) {
                     return oore;
                 }
                 self.offset = self.flen.unwrap() - xn;
-            },
-            Current(x) => {
-                match do_offset_add(self.offset, x) {
-                    Some(y) => self.offset = y,
-                    None    => return oore,
-                }
+            }
+            Current(x) => match do_offset_add(self.offset, x) {
+                Some(y) => self.offset = y,
+                None => return oore,
             },
         }
 
@@ -156,7 +169,10 @@ impl io::Seek for ContinuableFile {
     #[cfg(feature = "seek_convenience")]
     fn stream_len(&mut self) -> io::Result<u64> {
         match self.flen {
-            None    => Err(io::Error::new(io::ErrorKind::InvalidInput, "seek out of range")),
+            None => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "seek out of range",
+            )),
             Some(x) => Ok(x),
         }
     }
@@ -195,7 +211,11 @@ impl std::iter::Iterator for ChunkedFile {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let flen = self.cf.flen;
-        (flen.map(|x| (x - self.cf.offset as u64) as usize).unwrap_or(0), None)
+        (
+            flen.map(|x| (x - self.cf.offset as u64) as usize)
+                .unwrap_or(0),
+            None,
+        )
     }
 }
 
