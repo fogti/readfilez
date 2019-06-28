@@ -1,10 +1,14 @@
 [package]
 name = "readfilez"
-version = "0.0.2"
+version = "0.1.0"
 authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
 description = "Quite fast file to slice reading"
 license = "MIT"
 repository = "https://github.com/zserik/readfilez"
+
+[features]
+default = []
+seek_convenience = []
 
 [dependencies]
 boolinator = "2.4"
