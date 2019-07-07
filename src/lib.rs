@@ -22,11 +22,17 @@ impl FileHandle {
     /// This function returns a slice pointing to
     /// the contents of the [`FileHandle`].
     #[inline]
-    pub fn get_slice(&self) -> &[u8] {
+    pub fn as_slice(&self) -> &[u8] {
         match self {
             Mapped(ref dt) => &dt[..],
             Buffered(ref dt) => &dt[..],
         }
+    }
+
+    #[deprecated(since = "0.1.2", note = "please use 'as_slice' instead")]
+    #[inline]
+    pub fn get_slice(&self) -> &[u8] {
+        self.as_slice()
     }
 }
 
@@ -35,7 +41,7 @@ impl std::ops::Deref for FileHandle {
 
     #[inline]
     fn deref(&self) -> &[u8] {
-        self.get_slice()
+        self.as_slice()
     }
 }
 
@@ -138,14 +144,18 @@ impl ContinuableFile {
         self.offset += rfh.len() as u64;
         Ok(rfh)
     }
+
+    fn get_soor_err() -> io::Error {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "seek out of range",
+        )
+    }
 }
 
 impl io::Seek for ContinuableFile {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-        let oore = Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "seek out of range",
-        ));
+        let oore = Err(Self::get_soor_err());
         use io::SeekFrom::*;
 
         match pos {
@@ -169,10 +179,7 @@ impl io::Seek for ContinuableFile {
     #[cfg(feature = "seek_convenience")]
     fn stream_len(&mut self) -> io::Result<u64> {
         match self.flen {
-            None => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "seek out of range",
-            )),
+            None => Err(Self::get_soor_err()),
             Some(x) => Ok(x),
         }
     }
@@ -185,14 +192,29 @@ impl io::Seek for ContinuableFile {
 
 // getters
 impl ChunkedFile {
+    #[inline]
+    pub fn inner_mut(&mut self) -> &mut ContinuableFile {
+        &mut self.cf
+    }
+
+    #[inline]
+    #[deprecated(since = "0.1.2", note = "please use 'inner_mut' instead")]
     pub fn get_inner_ref(&mut self) -> &mut ContinuableFile {
         &mut self.cf
     }
 
+    #[inline]
     pub fn into_inner(self) -> ContinuableFile {
         self.cf
     }
 
+    #[inline]
+    pub fn to_lns(&self) -> LengthSpec {
+        self.lns
+    }
+
+    #[inline]
+    #[deprecated(since = "0.1.2", note = "please use 'to_lns' instead")]
     pub fn get_lns(&self) -> LengthSpec {
         self.lns
     }
@@ -211,9 +233,9 @@ impl std::iter::Iterator for ChunkedFile {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let flen = self.cf.flen;
+        let offset = self.cf.offset;
         (
-            flen.map(|x| (x - self.cf.offset as u64) as usize)
-                .unwrap_or(0),
+            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y)).unwrap_or(0),
             None,
         )
     }

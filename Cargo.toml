@@ -1,6 +1,6 @@
 [package]
 name = "readfilez"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
 description = "Quite fast file to slice reading"
 license = "MIT"
