@@ -29,7 +29,7 @@ impl FileHandle {
         }
     }
 
-    #[deprecated(since = "0.1.2", note = "please use 'as_slice' instead")]
+    #[deprecated(since = "0.1.2", note = "please use `as_slice` instead")]
     #[inline]
     pub fn get_slice(&self) -> &[u8] {
         self.as_slice()
@@ -52,12 +52,10 @@ pub struct LengthSpec {
 }
 
 impl LengthSpec {
-    /// @param bound
-    ///   ? (read at most $n bytes)
-    ///   : (read until EOF)
-    /// @param is_exact
-    ///   ? (request exactly length or fail)
-    ///   : (request biggest readable slice with length as upper bound)
+    /// Arguments:
+    ///
+    /// * `bound` ? (read at most $n bytes) : (read until EOF)
+    /// * `is_exact` ? (request exactly length or fail) : (request biggest readable slice with length as upper bound)
     pub fn new(bound: Option<usize>, is_exact: bool) -> Self {
         Self { bound, is_exact }
     }
@@ -130,6 +128,11 @@ impl ContinuableFile {
         return ret;
     }
 
+    pub fn into_chunks(self, lns: LengthSpec) -> ChunkedFile {
+        ChunkedFile { cf: self, lns }
+    }
+
+    #[deprecated(since = "0.1.3", note = "please use `into_chunks` instead")]
     pub fn to_chunks(self, lns: LengthSpec) -> ChunkedFile {
         ChunkedFile { cf: self, lns }
     }
@@ -138,7 +141,7 @@ impl ContinuableFile {
         self.flen = get_file_len(&self.file);
     }
 
-    /// Tries to read the next part of the file contents
+    /// Tries to read the next part of the file contents, according to the LengthSpec
     pub fn next(&mut self, lns: LengthSpec) -> io::Result<FileHandle> {
         let rfh = read_part_from_file_intern(&mut self.file, self.offset, lns, self.flen)?;
         self.offset += rfh.len() as u64;
@@ -146,10 +149,7 @@ impl ContinuableFile {
     }
 
     fn get_soor_err() -> io::Error {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "seek out of range",
-        )
+        io::Error::new(io::ErrorKind::InvalidInput, "seek out of range")
     }
 }
 
@@ -198,7 +198,7 @@ impl ChunkedFile {
     }
 
     #[inline]
-    #[deprecated(since = "0.1.2", note = "please use 'inner_mut' instead")]
+    #[deprecated(since = "0.1.2", note = "please use `inner_mut` instead")]
     pub fn get_inner_ref(&mut self) -> &mut ContinuableFile {
         &mut self.cf
     }
@@ -214,7 +214,7 @@ impl ChunkedFile {
     }
 
     #[inline]
-    #[deprecated(since = "0.1.2", note = "please use 'to_lns' instead")]
+    #[deprecated(since = "0.1.2", note = "please use `to_lns` instead")]
     pub fn get_lns(&self) -> LengthSpec {
         self.lns
     }
@@ -235,7 +235,8 @@ impl std::iter::Iterator for ChunkedFile {
         let flen = self.cf.flen;
         let offset = self.cf.offset;
         (
-            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y)).unwrap_or(0),
+            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y))
+                .unwrap_or(0),
             None,
         )
     }
