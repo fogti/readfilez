@@ -1,16 +1,16 @@
 #![cfg_attr(feature = "seek_convenience", feature(seek_convenience))]
 
-extern crate boolinator;
-extern crate memmap;
 mod backend;
 
-use backend::*;
+use crate::backend::*;
+use delegate::delegate;
 use memmap::Mmap;
-use std::{fs, io};
+use std::{fs, io, ops::Deref};
 
 // public interface
 
 /// buffered or mmapped file contents handle
+#[must_use]
 pub enum FileHandle {
     Mapped(Mmap),
     Buffered(Vec<u8>),
@@ -21,27 +21,21 @@ use self::FileHandle::*;
 impl FileHandle {
     /// This function returns a slice pointing to
     /// the contents of the [`FileHandle`].
-    #[inline]
+    #[inline(always)]
     pub fn as_slice(&self) -> &[u8] {
-        match self {
-            Mapped(ref dt) => &dt[..],
-            Buffered(ref dt) => &dt[..],
-        }
-    }
-
-    #[deprecated(since = "0.1.2", note = "please use `as_slice` instead")]
-    #[inline]
-    pub fn get_slice(&self) -> &[u8] {
-        self.as_slice()
+        Deref::deref(self)
     }
 }
 
-impl std::ops::Deref for FileHandle {
+impl Deref for FileHandle {
     type Target = [u8];
 
-    #[inline]
+    #[inline(always)]
     fn deref(&self) -> &[u8] {
-        self.as_slice()
+        match self {
+            Mapped(ref dt) => Deref::deref(dt),
+            Buffered(ref dt) => Deref::deref(dt),
+        }
     }
 }
 
@@ -52,10 +46,11 @@ pub struct LengthSpec {
 }
 
 impl LengthSpec {
-    /// Arguments:
+    /// # Arguments:
     ///
     /// * `bound` ? (read at most $n bytes) : (read until EOF)
     /// * `is_exact` ? (request exactly length or fail) : (request biggest readable slice with length as upper bound)
+    #[inline]
     pub fn new(bound: Option<usize>, is_exact: bool) -> Self {
         Self { bound, is_exact }
     }
@@ -113,8 +108,8 @@ pub struct ContinuableFile {
 
 #[must_use]
 pub struct ChunkedFile {
-    cf: ContinuableFile,
-    lns: LengthSpec,
+    pub cf: ContinuableFile,
+    pub lns: LengthSpec,
 }
 
 impl ContinuableFile {
@@ -125,18 +120,15 @@ impl ContinuableFile {
             offset: 0,
         };
         ret.sync_len();
-        return ret;
+        ret
     }
 
+    #[inline]
     pub fn into_chunks(self, lns: LengthSpec) -> ChunkedFile {
         ChunkedFile { cf: self, lns }
     }
 
-    #[deprecated(since = "0.1.3", note = "please use `into_chunks` instead")]
-    pub fn to_chunks(self, lns: LengthSpec) -> ChunkedFile {
-        ChunkedFile { cf: self, lns }
-    }
-
+    #[inline]
     pub fn sync_len(&mut self) {
         self.flen = get_file_len(&self.file);
     }
@@ -155,68 +147,37 @@ impl ContinuableFile {
 
 impl io::Seek for ContinuableFile {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-        let oore = Err(Self::get_soor_err());
         use io::SeekFrom::*;
 
-        match pos {
-            Start(x) => self.offset = x,
-            End(x) => {
-                let xn: u64 = (-x) as u64;
-                if (x > 0) || self.flen.is_none() || (xn > self.flen.unwrap()) {
-                    return oore;
-                }
-                self.offset = self.flen.unwrap() - xn;
+        if let Some(y) = match pos {
+            Start(x) => Some(x),
+            End(x) => self.flen.and_then(|flen| do_offset_add(flen, x)),
+            Current(x) => do_offset_add(self.offset, x),
+        }
+        .and_then(|y| {
+            if self.flen.map(|flen| flen < y) == Some(true) {
+                None
+            } else {
+                Some(y)
             }
-            Current(x) => match do_offset_add(self.offset, x) {
-                Some(y) => self.offset = y,
-                None => return oore,
-            },
+        }) {
+            self.offset = y;
+            Ok(self.offset)
+        } else {
+            Err(Self::get_soor_err())
         }
-
-        Ok(self.offset)
     }
 
     #[cfg(feature = "seek_convenience")]
+    #[inline(always)]
     fn stream_len(&mut self) -> io::Result<u64> {
-        match self.flen {
-            None => Err(Self::get_soor_err()),
-            Some(x) => Ok(x),
-        }
+        self.flen.ok_or_else(Self::get_soor_err)
     }
 
     #[cfg(feature = "seek_convenience")]
+    #[inline(always)]
     fn stream_position(&mut self) -> io::Result<u64> {
         Ok(self.offset)
-    }
-}
-
-// getters
-impl ChunkedFile {
-    #[inline]
-    pub fn inner_mut(&mut self) -> &mut ContinuableFile {
-        &mut self.cf
-    }
-
-    #[inline]
-    #[deprecated(since = "0.1.2", note = "please use `inner_mut` instead")]
-    pub fn get_inner_ref(&mut self) -> &mut ContinuableFile {
-        &mut self.cf
-    }
-
-    #[inline]
-    pub fn into_inner(self) -> ContinuableFile {
-        self.cf
-    }
-
-    #[inline]
-    pub fn to_lns(&self) -> LengthSpec {
-        self.lns
-    }
-
-    #[inline]
-    #[deprecated(since = "0.1.2", note = "please use `to_lns` instead")]
-    pub fn get_lns(&self) -> LengthSpec {
-        self.lns
     }
 }
 
@@ -224,26 +185,29 @@ impl std::iter::Iterator for ChunkedFile {
     type Item = io::Result<FileHandle>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.cf.next(self.lns);
-        match item {
-            Ok(ref x) if x.len() == 0 => None,
-            _ => Some(item),
+        match self.cf.next(self.lns) {
+            Ok(ref x) if x.is_empty() => None,
+            item => Some(item),
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let flen = self.cf.flen;
-        let offset = self.cf.offset;
-        (
-            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y))
-                .unwrap_or(0),
-            None,
-        )
+        let (flen, offset) = (self.cf.flen, self.cf.offset);
+        let lower_bound =
+            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y));
+        (lower_bound.unwrap_or(0), lower_bound.map(|x| x + 1))
     }
 }
 
 impl io::Seek for ChunkedFile {
-    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-        self.cf.seek(pos)
+    delegate! {
+        target self.cf {
+            fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64>;
+
+            #[cfg(feature = "seek_convenience")]
+            fn stream_len(&mut self) -> io::Result<u64>;
+            #[cfg(feature = "seek_convenience")]
+            fn stream_position(&mut self) -> io::Result<u64>;
+        }
     }
 }

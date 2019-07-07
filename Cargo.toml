@@ -1,15 +1,15 @@
 [package]
 name = "readfilez"
-version = "0.1.3"
+version = "0.2.0"
 authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
 description = "Quite fast file to slice reading"
-license = "MIT"
+edition = "2018"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/zserik/readfilez"
 
 [features]
-default = []
 seek_convenience = []
 
 [dependencies]
-boolinator = "2.4"
+delegate = "0.3"
 memmap = "0.7"

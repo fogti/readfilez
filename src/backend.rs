@@ -1,6 +1,8 @@
 use crate::{get_file_len, FileHandle, FileHandle::*, LengthSpec};
-use boolinator::Boolinator;
-use std::{fs::File, io, io::Read, io::Seek};
+use std::{
+    fs::File,
+    io::{self, Read, Seek},
+};
 
 // private interface
 
@@ -16,97 +18,71 @@ fn open_as_mmap(fh: &File, offset: u64, len: usize) -> io::Result<memmap::Mmap> 
     })
 }
 
-#[must_use]
-enum EvaluatedLength {
-    ELUnknown,
-    ELImpossible,
-    ELBounded(usize),
-}
-
-use self::EvaluatedLength::*;
-
-/// @param flen_hint : used to cache the call to [`get_file_len`]
-fn eval_length(
-    fh: &File,
-    offset: u64,
-    lenspec: LengthSpec,
-    flen_hint: Option<u64>,
-) -> EvaluatedLength {
-    let maxlen_i = std::isize::MAX as usize;
-    let is_untileof = lenspec.bound.is_none();
-    let x = lenspec.bound.unwrap_or(maxlen_i);
-    let maxlen_f = flen_hint
-        .or_else(|| get_file_len(&fh))
-        .map(|lx| (lx - offset) as usize)
-        .unwrap_or(maxlen_i);
-    let maxlen = std::cmp::min(maxlen_f, maxlen_i);
-    return if x > maxlen {
-        // ensure maximum length
-        if !lenspec.is_exact {
-            ELBounded(maxlen)
-        } else if !is_untileof {
-            ELImpossible
-        } else if maxlen == maxlen_i {
-            ELUnknown
-        } else {
-            ELBounded(maxlen)
-        }
-    } else {
-        if is_untileof {
-            ELUnknown
-        } else {
-            ELBounded(x)
-        }
-    };
-}
-
 /// Reads a part of the file contents,
 /// use this if the file is too big and needs to be read in parts,
 /// starting at [`offset`] and until the given LengthSpec is met.
+///
+/// @param flen_hint : used to cache the call to [`get_file_len`]
 pub(crate) fn read_part_from_file_intern(
     fh: &mut File,
     offset: u64,
-    len: LengthSpec,
+    lenspec: LengthSpec,
     flen_hint: Option<u64>,
 ) -> io::Result<FileHandle> {
-    let evl = eval_length(&fh, offset, len, flen_hint);
-    match evl {
-        ELImpossible => {
+    // evaluate file length
+    let evl: Option<usize> = {
+        let maxlen_i = std::isize::MAX as usize;
+
+        if lenspec.is_exact && lenspec.bound.map(|len| len > maxlen_i) == Some(true) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "length is too big",
             ));
         }
-        ELBounded(0) => {
+
+        [
+            lenspec.bound,
+            flen_hint
+                .or_else(|| get_file_len(&fh))
+                .map(|lx| (lx - offset) as usize),
+        ]
+        .iter()
+        .flatten()
+        .min()
+        .and_then(|&mxl| if mxl < maxlen_i { Some(mxl) } else { None })
+    };
+
+    // check common cases
+    match evl {
+        Some(0) => {
             return Ok(Buffered(Vec::new()));
         }
-        ELBounded(lx) => {
+        Some(lx) => {
             // do NOT try to map the file if the size is unknown
-            if let Some(ret) = open_as_mmap(&fh, offset, lx).ok() {
+            if let Ok(ret) = open_as_mmap(&fh, offset, lx) {
                 return Ok(Mapped(ret));
             }
         }
-        ELUnknown => {}
+        None => {}
     }
 
-    // use Buffered
-    use std::hint::unreachable_unchecked;
+    // use Buffered as fallback
     fh.seek(io::SeekFrom::Start(offset))?;
     let mut bfr = io::BufReader::new(fh);
     let mut contents = Vec::new();
     match evl {
-        ELImpossible => unsafe { unreachable_unchecked() },
-        ELBounded(lx) => {
+        Some(lx) => {
             contents.resize(lx, 0);
-            if len.is_exact {
+            if lenspec.is_exact {
                 bfr.read_exact(&mut contents)?;
             } else {
-                bfr.read(&mut contents)?;
+                let bcnt = bfr.read(&mut contents)?;
+                contents.truncate(bcnt);
             }
         }
-        ELUnknown => {
+        None => {
             if let Err(x) = bfr.read_to_end(&mut contents) {
-                if len.is_exact || contents.is_empty() {
+                if lenspec.is_exact || contents.is_empty() {
                     return Err(x);
                 }
             }
@@ -116,10 +92,15 @@ pub(crate) fn read_part_from_file_intern(
     Ok(Buffered(contents))
 }
 
+#[inline(always)]
 pub(crate) fn do_offset_add(offset: u64, x: i64) -> Option<u64> {
     if x < 0 {
         let xn = (-x) as u64;
-        (xn <= offset).as_some_from(|| offset - xn)
+        if xn <= offset {
+            Some(offset - xn)
+        } else {
+            None
+        }
     } else {
         Some(offset + (x as u64))
     }
