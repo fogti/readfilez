@@ -41,8 +41,8 @@ impl Deref for FileHandle {
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub struct LengthSpec {
-    bound: Option<usize>,
-    is_exact: bool,
+    pub bound: Option<usize>,
+    pub is_exact: bool,
 }
 
 impl LengthSpec {
