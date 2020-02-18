@@ -201,7 +201,7 @@ impl std::iter::Iterator for ChunkedFile {
 
 impl io::Seek for ChunkedFile {
     delegate! {
-        target self.cf {
+        to self.cf {
             fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64>;
 
             #[cfg(feature = "seek_convenience")]
