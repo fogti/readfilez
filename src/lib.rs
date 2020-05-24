@@ -3,7 +3,7 @@
 mod backend;
 
 use crate::backend::*;
-use delegate::delegate;
+use delegate_attr::delegate;
 use memmap::Mmap;
 use std::{fs, io, ops::Deref};
 
@@ -199,15 +199,12 @@ impl std::iter::Iterator for ChunkedFile {
     }
 }
 
+#[delegate(self.cf)]
 impl io::Seek for ChunkedFile {
-    delegate! {
-        to self.cf {
-            fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64>;
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64>;
 
-            #[cfg(feature = "seek_convenience")]
-            fn stream_len(&mut self) -> io::Result<u64>;
-            #[cfg(feature = "seek_convenience")]
-            fn stream_position(&mut self) -> io::Result<u64>;
-        }
-    }
+    #[cfg(feature = "seek_convenience")]
+    fn stream_len(&mut self) -> io::Result<u64>;
+    #[cfg(feature = "seek_convenience")]
+    fn stream_position(&mut self) -> io::Result<u64>;
 }
