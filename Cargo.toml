@@ -1,6 +1,6 @@
 [package]
 name = "readfilez"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Erik Zscheile <zseri.devel@ytrizja.de>"]
 description = "Quite fast file to slice reading"
 edition = "2018"

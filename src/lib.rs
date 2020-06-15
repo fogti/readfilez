@@ -77,12 +77,14 @@ pub fn get_file_len(fh: &fs::File) -> Option<u64> {
 
 /// Reads the file contents
 pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
-    let mut fh = fh?;
-    let lns = LengthSpec {
-        bound: None,
-        is_exact: true,
-    };
-    read_part_from_file(&mut fh, 0, lns)
+    read_part_from_file(
+        &mut fh?,
+        0,
+        LengthSpec {
+            bound: None,
+            is_exact: true,
+        },
+    )
 }
 
 /// Reads a part of the file contents,
@@ -153,19 +155,13 @@ impl io::Seek for ContinuableFile {
             Start(x) => Some(x),
             End(x) => self.flen.and_then(|flen| do_offset_add(flen, x)),
             Current(x) => do_offset_add(self.offset, x),
-        }
-        .and_then(|y| {
-            if self.flen.map(|flen| flen < y) == Some(true) {
-                None
-            } else {
-                Some(y)
+        } {
+            if self.flen.map(|flen| flen < y) != Some(true) {
+                self.offset = y;
+                return Ok(y);
             }
-        }) {
-            self.offset = y;
-            Ok(self.offset)
-        } else {
-            Err(Self::get_soor_err())
         }
+        Err(Self::get_soor_err())
     }
 
     #[cfg(feature = "seek_convenience")]

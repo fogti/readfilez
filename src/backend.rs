@@ -7,15 +7,15 @@ use std::{
 // private interface
 
 fn open_as_mmap(fh: &File, offset: u64, len: usize) -> io::Result<memmap::Mmap> {
-    Ok(unsafe {
+    unsafe {
         // NOTE: replace map_copy?.make_read_only? with map_copy_read_only?
         // once issue danburkert/memmap-rs#81 is fixed
         memmap::MmapOptions::new()
             .offset(offset)
             .len(len)
             .map_copy(&fh)?
-            .make_read_only()?
-    })
+            .make_read_only()
+    }
 }
 
 /// Reads a part of the file contents,
