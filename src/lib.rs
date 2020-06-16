@@ -197,10 +197,11 @@ impl std::iter::Iterator for ChunkedFile {
 
 #[delegate(self.cf)]
 impl io::Seek for ChunkedFile {
-    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64>;
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> { }
 
     #[cfg(feature = "seek_convenience")]
-    fn stream_len(&mut self) -> io::Result<u64>;
+    fn stream_len(&mut self) -> io::Result<u64> { }
+
     #[cfg(feature = "seek_convenience")]
-    fn stream_position(&mut self) -> io::Result<u64>;
+    fn stream_position(&mut self) -> io::Result<u64> { }
 }
