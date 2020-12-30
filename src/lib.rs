@@ -4,7 +4,7 @@ mod backend;
 
 use crate::backend::*;
 use delegate_attr::delegate;
-use memmap::Mmap;
+use memmap2::Mmap;
 use std::{fs, io, ops::Deref};
 
 // public interface
@@ -68,7 +68,7 @@ impl std::default::Default for LengthSpec {
 }
 
 /// Returns the length of the file,
-/// and is based upon [`memmap::MmapOptions::get_len()`].
+/// and is based upon [`memmap2::MmapOptions::get_len()`].
 /// It doesn't sanitize the fact that mapping a slice greater than isize::MAX
 /// has undefined behavoir.
 pub fn get_file_len(fh: &fs::File) -> Option<u64> {
@@ -197,11 +197,11 @@ impl std::iter::Iterator for ChunkedFile {
 
 #[delegate(self.cf)]
 impl io::Seek for ChunkedFile {
-    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> { }
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {}
 
     #[cfg(feature = "seek_convenience")]
-    fn stream_len(&mut self) -> io::Result<u64> { }
+    fn stream_len(&mut self) -> io::Result<u64> {}
 
     #[cfg(feature = "seek_convenience")]
-    fn stream_position(&mut self) -> io::Result<u64> { }
+    fn stream_position(&mut self) -> io::Result<u64> {}
 }

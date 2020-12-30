@@ -1,6 +1,6 @@
 [package]
 name = "readfilez"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Erik Zscheile <zseri.devel@ytrizja.de>"]
 description = "Quite fast file to slice reading"
 edition = "2018"
@@ -12,4 +12,4 @@ seek_convenience = []
 
 [dependencies]
 delegate-attr = "0.2"
-memmap = "0.7"
+memmap2 = "0.2"
