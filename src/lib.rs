@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "seek_convenience", feature(seek_convenience))]
-
 mod backend;
 
 use crate::backend::*;
@@ -162,13 +160,11 @@ impl io::Seek for ContinuableFile {
         Err(Self::get_soor_err())
     }
 
-    #[cfg(feature = "seek_convenience")]
-    #[inline(always)]
-    fn stream_len(&mut self) -> io::Result<u64> {
-        self.flen.ok_or_else(Self::get_soor_err)
-    }
+    //#[inline(always)]
+    //fn stream_len(&mut self) -> io::Result<u64> {
+    //    self.flen.ok_or_else(Self::get_soor_err)
+    //}
 
-    #[cfg(feature = "seek_convenience")]
     #[inline(always)]
     fn stream_position(&mut self) -> io::Result<u64> {
         Ok(self.offset)
@@ -197,9 +193,8 @@ impl std::iter::Iterator for ChunkedFile {
 impl io::Seek for ChunkedFile {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {}
 
-    #[cfg(feature = "seek_convenience")]
-    fn stream_len(&mut self) -> io::Result<u64> {}
+    //#[cfg(feature = "seek_stream_len")]
+    //fn stream_len(&mut self) -> io::Result<u64> {}
 
-    #[cfg(feature = "seek_convenience")]
     fn stream_position(&mut self) -> io::Result<u64> {}
 }

@@ -6,9 +6,6 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/zseri/readfilez"
 
-[features]
-seek_convenience = []
-
 [dependencies]
 delegate-attr = "0.2"
 memmap2 = "0.5"
