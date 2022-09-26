@@ -24,8 +24,8 @@ impl FileHandle {
     #[inline]
     pub fn as_slice(&self) -> &[u8] {
         match self {
-            Mapped(ref dt) => &*dt,
-            Buffered(ref dt) => &*dt,
+            Mapped(ref dt) => dt,
+            Buffered(ref dt) => dt,
         }
     }
 }
@@ -101,11 +101,11 @@ pub fn read_from_file(fh: io::Result<fs::File>) -> io::Result<FileHandle> {
 /// fh is a reference because this function is intended to be called multiple times
 #[inline]
 pub fn read_part_from_file(
-    mut fh: &mut fs::File,
+    fh: &mut fs::File,
     offset: u64,
     len: LengthSpec,
 ) -> io::Result<FileHandle> {
-    read_part_from_file_intern(&mut fh, offset, len, None)
+    read_part_from_file_intern(fh, offset, len, None)
 }
 
 #[must_use]

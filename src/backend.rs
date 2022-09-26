@@ -40,7 +40,7 @@ pub(crate) fn read_part_from_file_intern(
         [
             lenspec.bound,
             flen_hint
-                .or_else(|| get_file_len(&fh))
+                .or_else(|| get_file_len(fh))
                 .map(|lx| (lx - offset) as usize),
         ]
         .iter()
@@ -56,7 +56,7 @@ pub(crate) fn read_part_from_file_intern(
         }
         Some(lx) => {
             // do NOT try to map the file if the size is unknown
-            if let Ok(ret) = open_as_mmap(&fh, offset, lx) {
+            if let Ok(ret) = open_as_mmap(fh, offset, lx) {
                 return Ok(Mapped(ret));
             }
         }
@@ -69,6 +69,7 @@ pub(crate) fn read_part_from_file_intern(
     let mut contents = Vec::new();
     match evl {
         Some(lx) => {
+            // NOTE: clippy::read_zero_byte_vec fires here, idk why
             contents.resize(lx, 0);
             if lenspec.is_exact {
                 bfr.read_exact(&mut contents)?;
@@ -84,7 +85,7 @@ pub(crate) fn read_part_from_file_intern(
                 }
             }
         }
-    };
+    }
     Ok(Buffered(contents.into_boxed_slice()))
 }
 
