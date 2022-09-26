@@ -89,7 +89,7 @@ pub(crate) fn read_part_from_file_intern(
     Ok(Buffered(contents.into_boxed_slice()))
 }
 
-#[inline(always)]
+#[inline]
 pub(crate) fn do_offset_add(offset: u64, x: i64) -> Option<u64> {
     if x < 0 {
         let xn = (-x) as u64;

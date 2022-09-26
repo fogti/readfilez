@@ -48,24 +48,15 @@ impl Deref for FileHandle {
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub struct LengthSpec {
+    /// `bound` ? (read at most $n bytes) : (read until EOF)
     pub bound: Option<usize>,
+    /// `is_exact` ? (request exactly length or fail) : (request biggest readable slice with length as upper bound)
     pub is_exact: bool,
-}
-
-impl LengthSpec {
-    /// # Arguments:
-    ///
-    /// * `bound` ? (read at most $n bytes) : (read until EOF)
-    /// * `is_exact` ? (request exactly length or fail) : (request biggest readable slice with length as upper bound)
-    #[inline]
-    pub fn new(bound: Option<usize>, is_exact: bool) -> Self {
-        Self { bound, is_exact }
-    }
 }
 
 impl std::default::Default for LengthSpec {
     /// read as much as possible
-    #[inline]
+    #[inline(always)]
     fn default() -> Self {
         Self {
             bound: None,
