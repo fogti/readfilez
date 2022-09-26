@@ -1,15 +1,14 @@
 [package]
 name = "readfilez"
-version = "0.2.4"
-authors = ["Erik Zscheile <zseri.devel@ytrizja.de>"]
+version = "0.3.0"
 description = "Quite fast file to slice reading"
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/zserik/readfilez"
+repository = "https://github.com/zseri/readfilez"
 
 [features]
 seek_convenience = []
 
 [dependencies]
 delegate-attr = "0.2"
-memmap2 = "0.2"
+memmap2 = "0.5"

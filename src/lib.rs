@@ -13,7 +13,7 @@ use std::{fs, io, ops::Deref};
 #[must_use]
 pub enum FileHandle {
     Mapped(Mmap),
-    Buffered(Vec<u8>),
+    Buffered(Box<[u8]>),
 }
 
 use self::FileHandle::*;
@@ -21,9 +21,19 @@ use self::FileHandle::*;
 impl FileHandle {
     /// This function returns a slice pointing to
     /// the contents of the [`FileHandle`].
-    #[inline(always)]
+    #[inline]
     pub fn as_slice(&self) -> &[u8] {
-        Deref::deref(self)
+        match self {
+            Mapped(ref dt) => &*dt,
+            Buffered(ref dt) => &*dt,
+        }
+    }
+}
+
+impl AsRef<[u8]> for FileHandle {
+    #[inline(always)]
+    fn as_ref(&self) -> &[u8] {
+        self.as_slice()
     }
 }
 
@@ -32,10 +42,7 @@ impl Deref for FileHandle {
 
     #[inline(always)]
     fn deref(&self) -> &[u8] {
-        match self {
-            Mapped(ref dt) => Deref::deref(dt),
-            Buffered(ref dt) => Deref::deref(dt),
-        }
+        self.as_slice()
     }
 }
 

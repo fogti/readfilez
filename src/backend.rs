@@ -7,12 +7,12 @@ use std::{
 // private interface
 
 fn open_as_mmap(fh: &File, offset: u64, len: usize) -> io::Result<memmap2::Mmap> {
-    Ok(unsafe {
+    unsafe {
         memmap2::MmapOptions::new()
             .offset(offset)
             .len(len)
-            .map_copy_read_only(&fh)
-    }?)
+            .map_copy_read_only(fh)
+    }
 }
 
 /// Reads a part of the file contents,
@@ -52,7 +52,7 @@ pub(crate) fn read_part_from_file_intern(
     // check common cases
     match evl {
         Some(0) => {
-            return Ok(Buffered(Vec::new()));
+            return Ok(Buffered(Vec::new().into()));
         }
         Some(lx) => {
             // do NOT try to map the file if the size is unknown
@@ -85,8 +85,7 @@ pub(crate) fn read_part_from_file_intern(
             }
         }
     };
-    contents.shrink_to_fit();
-    Ok(Buffered(contents))
+    Ok(Buffered(contents.into_boxed_slice()))
 }
 
 #[inline(always)]
