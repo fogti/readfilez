@@ -1,11 +1,11 @@
 [package]
 name = "readfilez"
-version = "0.3.0"
+version = "0.3.1"
 description = "Quite fast file to slice reading"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/zseri/readfilez"
+repository = "https://github.com/fogti/readfilez"
 
 [dependencies]
 delegate-attr = "0.2"
-memmap2 = "0.5"
+memmap2 = ">= 0.5, <= 0.7"
