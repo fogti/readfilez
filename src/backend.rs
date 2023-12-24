@@ -65,27 +65,28 @@ pub(crate) fn read_part_from_file_intern(
 
     // use Buffered as fallback
     fh.seek(io::SeekFrom::Start(offset))?;
-    let mut bfr = io::BufReader::new(fh);
-    let mut contents = Vec::new();
-    match evl {
+    let contents = match evl {
+        Some(0) => Vec::new(),
         Some(lx) => {
-            // NOTE: clippy::read_zero_byte_vec fires here, idk why
-            contents.resize(lx, 0);
+            let mut contents = core::iter::repeat(0u8).take(lx).collect::<Vec<_>>();
             if lenspec.is_exact {
-                bfr.read_exact(&mut contents)?;
+                fh.read_exact(&mut contents)?;
             } else {
-                let bcnt = bfr.read(&mut contents)?;
+                let bcnt = fh.read(&mut contents)?;
                 contents.truncate(bcnt);
             }
+            contents
         }
         None => {
-            if let Err(x) = bfr.read_to_end(&mut contents) {
+            let mut contents = Vec::new();
+            if let Err(x) = fh.read_to_end(&mut contents) {
                 if lenspec.is_exact || contents.is_empty() {
                     return Err(x);
                 }
             }
+            contents
         }
-    }
+    };
     Ok(Buffered(contents.into_boxed_slice()))
 }
 

@@ -184,7 +184,7 @@ impl std::iter::Iterator for ChunkedFile {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let (flen, offset) = (self.cf.flen, self.cf.offset);
         let lower_bound =
-            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset as u64) as usize) / y));
+            flen.and_then(|x| self.lns.bound.map(|y| ((x - offset) as usize) / y));
         (lower_bound.unwrap_or(0), lower_bound.map(|x| x + 1))
     }
 }
